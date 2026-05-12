@@ -2,18 +2,31 @@
 
 The audit pipeline operates on pre-computed residual-stream hidden states,
 not on the raw LLM models. This separation means the audit can be re-run
-in under an hour without the ~30 hours of forward passes required to
-build the cache from scratch.
+in under an hour once the cache is downloaded, without the ~30 hours of
+forward passes required to build the cache from scratch.
 
-## What's cached
+## Availability during review
+
+The full ~15 GB cache cannot be hosted on GitHub due to file-size limits.
+During the NeurIPS review period the cache is available on request via the
+OpenReview discussion forum. Upon paper de-anonymization the full cache
+will be permanently released on Zenodo (DOI to be added at that time).
+
+To validate the audit pipeline without the raw hidden-state cache,
+`data/audit_results/phase3_main_results.json` contains the per-fold AUROC
+values for all 9 detectors x 13 conditions x 4 evaluation modes. Running
+`python analysis/build_tables.py` regenerates Tables 1-5 directly from
+this JSON, no `.npz` files required.
+
+## What the full cache contains
 
 For each of the 13 (model, dataset) conditions, two files are produced:
 
-- `{model_prefix}_{dataset}_rtraj_features.npz` (smaller, ~10-50 MB)
+- `{model_prefix}_{dataset}_rtraj_features.npz` (~10-50 MB)
   Contains: `proj_h_reasoning`, `proj_a_reasoning`, `proj_m_reasoning`,
   `labels`, `responses`, `questions`, `reasoning_dim`.
 
-- `{model_prefix}_{dataset}_rtraj_hidden.npz` (larger, ~500 MB-1.5 GB)
+- `{model_prefix}_{dataset}_rtraj_hidden.npz` (~500 MB-1.5 GB)
   Contains: `hidden_states` of shape `(N, L+1, D)` where N is the number
   of samples, L is the number of transformer layers, and D is the hidden
   dimension.
@@ -27,21 +40,7 @@ Plus one shared file per model:
 For SelfCheckGPT and SemanticEntropy, additional cached files live in
 sibling directories (`data/selfcheck/` and `data/semantic_entropy/`).
 
-## Total size
-
-Approximately 15 GB across all 13 conditions.
-
-## How to obtain the cache
-
-The full benchmark cache is hosted at [Zenodo link will be added on
-de-anonymization]. Download the archive and extract into `data/cache/`:
-
-    cd length-confound-benchmark
-    mkdir -p data/cache data/selfcheck data/semantic_entropy
-    # Download the archive (URL to be added)
-    # tar -xzvf length_confound_cache.tar.gz -C data/
-
-After extraction the directory layout should be:
+## Expected directory layout after extraction
 
     data/
       cache/
@@ -55,6 +54,9 @@ After extraction the directory layout should be:
       semantic_entropy/
         Qwen_Qwen2.5-7B-Instruct_triviaqa_semantic_entropy.npz
         ...
+      audit_results/
+        phase3_main_results.json        (committed in this repo)
+        tables.md                       (produced by analysis/build_tables.py)
 
 ## Reproducing the cache from scratch
 
@@ -72,7 +74,7 @@ instruction-tuned LLMs (Qwen2.5-7B-Instruct, Mistral-7B-Instruct-v0.2,
 Meta-Llama-3-8B-Instruct), then performs greedy decoding (or teacher-forced
 forward passes for HaluEval) and saves the hidden states.
 
-## Hardware requirements
+## Hardware requirements for reproduction
 
 - A single GPU with at least 24 GB of memory (one A100-80GB is what the
   paper uses). The Llama-3-8B-Instruct model in fp16 requires ~16 GB; the
